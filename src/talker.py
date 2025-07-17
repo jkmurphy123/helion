@@ -29,7 +29,8 @@ def run_talker(config):
         response = generate_response(
             f"You are a {personality}. Continue the conversation.", 
             message, 
-            history=history,
+            #history=history,
+            history=None,
             model=model, 
             api_key=api_key
         )
