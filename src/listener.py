@@ -17,7 +17,7 @@ def run_listener(config):
     )
 
     def on_message(message):
-        print(f"[{device_id}] Received: {message}")
+        #print(f"[{device_id}] Received: {message}")
         time.sleep(5)
 
         response = generate_response(
@@ -41,12 +41,12 @@ def run_listener(config):
     )
     mqtt.connect()
 
-    print(f"[{device_id}] Waiting in idle mode...")
+    #print(f"[{device_id}] Waiting in idle mode...")
 
     try:
         while True:
             thought = random.choice(idle_thoughts)
-            print(f"[{device_id} thinks] {thought}")
+            #print(f"[{device_id} thinks] {thought}")
             time.sleep(random.randint(*config["idle_interval_range"]))
     except KeyboardInterrupt:
         mqtt.disconnect()

@@ -23,7 +23,7 @@ def run_talker(config):
     def on_reply(message_from_listener):
         nonlocal conversation_active, waiting_for_reply, last_prompt_time, conversation_turns
 
-        print(f"[{device_id}] Received reply: {message_from_listener}")
+        #print(f"[{device_id}] Received reply: {message_from_listener}")
         waiting_for_reply = False
         memory.add_assistant_message(message_from_listener)  # ← This is listener's line
 
@@ -93,7 +93,7 @@ def run_talker(config):
                 start_time = time.time()
             else:
                 thought = random.choice(idle_thoughts)
-                print(f"[{device_id} thinks] {thought}")
+                #print(f"[{device_id} thinks] {thought}")
                 time.sleep(random.randint(*config["idle_interval_range"]))
     except KeyboardInterrupt:
         mqtt.disconnect()
