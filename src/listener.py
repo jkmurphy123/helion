@@ -1,8 +1,7 @@
 import time
 import random
-from chatgpt_handler import generate_idle_thoughts, generate_response
-from mqtt_handler import MQTTClient
-from conversation_memory import ConversationMemory
+from src.chatgpt_handler import generate_idle_thoughts, generate_response
+from src.mqtt_handler import MQTTClient
 
 def run_listener(config):
     device_id = config["device_id"]
@@ -17,35 +16,21 @@ def run_listener(config):
         model
     )
 
-    memory = ConversationMemory(max_length=10)
-
     def on_message(message):
-        nonlocal memory
+        print(f"[{device_id}] Received: {message}")
+        time.sleep(5)
 
-        try:
-            print(f"[{device_id}] Received: {message}")
-            time.sleep(5)
+        response = generate_response(
+            system_prompt=f"You are a {personality}. Respond to this message as if you're chatting with a curious friend:",
+            user_input=message,
+            history=None,
+            model=model,
+            api_key=api_key
+        )
 
-            # Treat incoming message from talker as user input
-            memory.add_user_message(message)
+        print(f"[{device_id}] Responding with: {response}")
+        mqtt.publish(response)
 
-            response = generate_response(
-                system_prompt=f"You are a {personality}. Respond to the message appropriately.",
-                user_input=message,
-                history=memory.get(),
-                model=model,
-                api_key=api_key
-            )
-
-            # Append response to memory
-            memory.add_assistant_message(response)
-
-            print(f"[{device_id}] Responding with: {response}")
-            mqtt.publish(response)
-        except Exception as e:
-            print(f"[{device_id} ERROR] Exception in on_message: {e}")
-
-    # Create MQTT client and connect
     mqtt = MQTTClient(
         client_id=device_id,
         broker=config["mqtt"]["broker"],
