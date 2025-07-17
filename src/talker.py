@@ -36,6 +36,9 @@ def run_talker(config):
             start_time = time.time()
             return
 
+        #tracing
+        print_conversation_history(memory.get())
+        
         response = generate_response(
             system_prompt=f"You are a {personality}. Continue the conversation naturally.",
             user_input=message,
@@ -47,6 +50,14 @@ def run_talker(config):
         print(f"[{device_id}] Responding with: {response}")
         mqtt.publish(response)
         conversation_turns += 1
+
+    def print_conversation_history(history):
+        print("\n--- Conversation History ---")
+        for i, msg in enumerate(history):
+            role = msg["role"]
+            content = msg["content"]
+            print(f"{i+1}. [{role.upper()}]: {content}")
+        print("--- End of History ---\n")
 
     mqtt = MQTTClient(
         client_id=device_id,
