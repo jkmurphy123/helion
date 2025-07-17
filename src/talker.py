@@ -50,8 +50,11 @@ def run_talker(config):
     print(f"[{device_id}] Starting in idle mode...")
 
     try:
+        start_time = time.time()
+        delay_to_start = config.get("conversation_start_delay", 30)  # fallback to 30 if not in config
+
         while True:
-            if not conversation_active and random.random() < 0.1:
+            if not conversation_active and time.time() - start_time >= delay_to_start:
                 topic_prompt = random.choice([
                     "Let's talk about dreams.",
                     "Do you think AI can fall in love?",
@@ -67,6 +70,7 @@ def run_talker(config):
                 thought = random.choice(idle_thoughts)
                 print(f"[{device_id} thinks] {thought}")
                 time.sleep(random.randint(*config["idle_interval_range"]))
+                
     except KeyboardInterrupt:
         mqtt.disconnect()
         print("\n[System] Talker stopped.")
