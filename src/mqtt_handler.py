@@ -3,7 +3,7 @@ from paho.mqtt.client import CallbackAPIVersion
 
 class MQTTClient:
     def __init__(self, client_id, broker, port, topic_in, topic_out, on_message_callback):
-        self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv5)
+        self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
 
         self.broker = broker
         self.port = port
@@ -15,7 +15,7 @@ class MQTTClient:
         self.client.on_message = self.handle_message
 
     def on_connect(self, client, userdata, flags, rc):
-        print(f"[MQTT] Connected to {self.broker}:{self.port} with result code {rc}")
+        print(f"[MQTT] Connected with result code {rc}")
         client.subscribe(self.topic_in)
 
     def handle_message(self, client, userdata, msg):
