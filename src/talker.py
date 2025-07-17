@@ -1,26 +1,72 @@
 import time
 import random
-from chatgpt_handler import generate_idle_thoughts
+from chatgpt_handler import generate_idle_thoughts, generate_response
+from mqtt_handler import MQTTClient
 
 def run_talker(config):
-    print(f"[{config['device_id']}] Running in TALKER mode with personality: {config['personality']}")
-    
-    # Load idle thoughts
-    thoughts = generate_idle_thoughts(
-        personality=config["personality"],
-        count=config["idle_thought_count"],
-        api_key=config["openai"]["api_key"],
-        model=config["openai"]["model"]
-    )
+    device_id = config["device_id"]
+    personality = config["personality"]
+    model = config["openai"]["model"]
+    api_key = config["openai"]["api_key"]
 
-    print("\nEntering idle mode. Press Ctrl+C to stop.\n")
+    # Load idle thoughts
+    idle_thoughts = generate_idle_thoughts(personality, config["idle_thought_count"], api_key, model)
+
+    # Track conversation state
+    conversation_active = False
+    history = []
+
+    def on_reply(message):
+        nonlocal conversation_active, history
+        if not conversation_active:
+            return
+        print(f"[{device_id}] Received reply: {message}")
+        history.append({"role": "assistant", "content": message})
+        time.sleep(5)
+
+        # Generate response
+        prompt = history[-1]["content"]
+        response = generate_response(
+            f"You are a {personality}. Continue the conversation.", 
+            prompt, 
+            history=history,
+            model=model, 
+            api_key=api_key
+        )
+        history.append({"role": "user", "content": response})
+        mqtt.publish(response)
+
+    # Start MQTT
+    mqtt = MQTTClient(
+        client_id=device_id,
+        broker=config["mqtt"]["broker"],
+        port=config["mqtt"]["port"],
+        topic_in=config["topics"]["chat_in"],
+        topic_out=config["topics"]["chat_out"],
+        on_message_callback=on_reply
+    )
+    mqtt.connect()
+
+    print(f"[{device_id}] Starting in idle mode...")
+
     try:
         while True:
-            thought = random.choice(thoughts)
-            print(f"[{config['device_id']} thinks] {thought}")
-
-            min_delay, max_delay = config.get("idle_interval_range", [15, 45])
-            delay = random.randint(min_delay, max_delay)
-            time.sleep(delay)
+            if not conversation_active and random.random() < 0.1:
+                topic_prompt = random.choice([
+                    "Let's talk about dreams.",
+                    "Do you think AI can fall in love?",
+                    "What's your opinion on pineapple pizza?",
+                    "How would you explain 'consciousness'?"
+                ])
+                print(f"[{device_id}] Starting conversation: {topic_prompt}")
+                history = [{"role": "user", "content": topic_prompt}]
+                mqtt.publish(topic_prompt)
+                conversation_active = True
+            else:
+                # Idle behavior
+                thought = random.choice(idle_thoughts)
+                print(f"[{device_id} thinks] {thought}")
+                time.sleep(random.randint(*config["idle_interval_range"]))
     except KeyboardInterrupt:
-        print("\n[System] Idle mode stopped.")
+        mqtt.disconnect()
+        print("\n[System] Talker stopped.")

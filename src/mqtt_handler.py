@@ -1,8 +1,10 @@
 import paho.mqtt.client as mqtt
+from paho.mqtt.client import CallbackAPIVersion
 
 class MQTTClient:
     def __init__(self, client_id, broker, port, topic_in, topic_out, on_message_callback):
-        self.client = mqtt.Client(client_id)
+        self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv5)
+
         self.broker = broker
         self.port = port
         self.topic_in = topic_in
