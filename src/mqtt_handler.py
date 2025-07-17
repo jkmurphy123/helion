@@ -21,7 +21,7 @@ class MQTTClient:
 
     def handle_message(self, client, userdata, msg):
         message = msg.payload.decode('utf-8')
-        print(f"[MQTT] Received: {message}")
+        #print(f"[MQTT] Received: {message}")
         self.on_message_callback(message)
 
     def connect(self):

@@ -1,7 +1,10 @@
+import sys
 import time
-import random
-from chatgpt_handler import generate_idle_thoughts, generate_response
+from PyQt5.QtWidgets import QApplication
+from display_window import ConversationWindow
+from chatgpt_handler import generate_response
 from mqtt_handler import MQTTClient
+from conversation_memory import ConversationMemory
 
 def run_listener(config):
     device_id = config["device_id"]
@@ -9,45 +12,54 @@ def run_listener(config):
     model = config["openai"]["model"]
     api_key = config["openai"]["api_key"]
 
-    idle_thoughts = generate_idle_thoughts(
-        personality,
-        config["idle_thought_count"],
-        api_key,
-        model
-    )
+    memory = ConversationMemory()
+    app = QApplication(sys.argv)
+    window = ConversationWindow()
+    conversation_lines = []
 
-    def on_message(message):
-        #print(f"[{device_id}] Received: {message}")
+    def update_display(new_line):
+        conversation_lines.append(new_line)
+        if len(conversation_lines) > 50:
+            conversation_lines.pop(0)
+        window.update_text("\n".join(conversation_lines))
+
+    def on_prompt(message):
+        update_display(f"[Talker] {message}")
+        memory.add_user_message(message)
+
         time.sleep(5)
 
         response = generate_response(
-            system_prompt=f"You are a {personality}. Respond to this message as if you're chatting with a curious friend:",
+            system_prompt=f"You are a {personality}. Respond in character and stay on topic.",
             user_input=message,
-            history=None,
+            history=memory.get(),
             model=model,
             api_key=api_key
         )
 
-        print(f"[{device_id}] Responding with: {response}")
+        update_display(f"[Listener] {response}")
+        memory.add_assistant_message(response)
         mqtt.publish(response)
 
     mqtt = MQTTClient(
         client_id=device_id,
         broker=config["mqtt"]["broker"],
         port=config["mqtt"]["port"],
-        topic_in=config["topics"]["chat_in"],       # e.g. "chat/send"
-        topic_out=config["topics"]["chat_out"],     # e.g. "chat/receive"
-        on_message_callback=on_message
+        topic_in=config["topics"]["chat_in"],
+        topic_out=config["topics"]["chat_out"],
+        on_message_callback=on_prompt
     )
     mqtt.connect()
 
-    #print(f"[{device_id}] Waiting in idle mode...")
+    update_display(f"[{device_id}] Waiting in idle mode...")
 
     try:
-        while True:
-            thought = random.choice(idle_thoughts)
-            #print(f"[{device_id} thinks] {thought}")
-            time.sleep(random.randint(*config["idle_interval_range"]))
+        sys.exit(app.exec_())
     except KeyboardInterrupt:
         mqtt.disconnect()
-        print("\n[System] Listener stopped.")
+        update_display("[System] Listener stopped.")
+        sys.exit()
+
+if __name__ == "__main__":
+    from src.config_loader import load_config
+    run_listener(load_config())
