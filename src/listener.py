@@ -12,7 +12,7 @@ def run_listener(config):
     idle_thoughts = generate_idle_thoughts(personality, config["idle_thought_count"], api_key, model)
 
     def on_message(message):
-        print(f"[{device_id}] Received: {message}")
+        #print(f"[{device_id}] Received: {message}")
         time.sleep(5)
 
         print(f"[{device_id}] ***Got message: {message}")

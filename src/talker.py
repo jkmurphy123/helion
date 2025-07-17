@@ -21,7 +21,7 @@ def run_talker(config):
         if not conversation_active:
             return
 
-        print(f"[{device_id}] Received reply: {message}")
+        print(f"[{device_id}] !!!Received reply: {message}")
         waiting_for_reply = False  # ✅ Mark that we got something
         history.append({"role": "assistant", "content": message})
         time.sleep(5)
@@ -34,7 +34,7 @@ def run_talker(config):
             api_key=api_key
         )
         history.append({"role": "user", "content": response})
-        #print(f"[{device_id}] Responding with: {response}")
+        print(f"[{device_id}] !!!Responding with: {response}")
         mqtt.publish(response)
 
     # Start MQTT
