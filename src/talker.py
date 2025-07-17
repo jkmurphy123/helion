@@ -20,34 +20,30 @@ def run_talker(config):
     conversation_turns = 0
     start_time = time.time()
 
-    def on_reply(message):
+    def on_reply(message_from_listener):
         nonlocal conversation_active, waiting_for_reply, last_prompt_time, conversation_turns
-        if not conversation_active:
-            return
 
-        print(f"[{device_id}] Received reply: {message}")
+        print(f"[{device_id}] Received reply: {message_from_listener}")
         waiting_for_reply = False
-        memory.add_assistant_message(message)
+        memory.add_assistant_message(message_from_listener)  # ← This is listener's line
+
         time.sleep(5)
 
         if conversation_turns >= max_turns:
             print(f"[{device_id}] That was a nice chat. I'm going idle now.")
             conversation_active = False
-            start_time = time.time()
             return
 
-        #tracing
-        print_conversation_history(memory.get())
-        
         response = generate_response(
             system_prompt=f"You are a {personality}. Continue the conversation naturally.",
-            user_input=message,
+            user_input=message_from_listener,
             history=memory.get(),
             model=model,
             api_key=api_key
         )
-        memory.add_user_message(response)
+
         print(f"[{device_id}] Responding with: {response}")
+        memory.add_user_message(response)  # ← This is talker’s next prompt
         mqtt.publish(response)
         conversation_turns += 1
 
