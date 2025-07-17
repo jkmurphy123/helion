@@ -2,43 +2,52 @@ import time
 import random
 from chatgpt_handler import generate_idle_thoughts, generate_response
 from mqtt_handler import MQTTClient
+from conversation_memory import ConversationMemory
 
 def run_talker(config):
     device_id = config["device_id"]
     personality = config["personality"]
     model = config["openai"]["model"]
     api_key = config["openai"]["api_key"]
-
-    # Load idle thoughts
+    delay_to_start = config.get("conversation_start_delay", 10)
     idle_thoughts = generate_idle_thoughts(personality, config["idle_thought_count"], api_key, model)
 
-    # Track conversation state
+    memory = ConversationMemory(max_length=10)
     conversation_active = False
-    history = []
+    waiting_for_reply = False
+    last_prompt_time = None
+    max_turns = 0
+    conversation_turns = 0
+    start_time = time.time()
 
     def on_reply(message):
-        nonlocal conversation_active, history, waiting_for_reply
+        nonlocal conversation_active, waiting_for_reply, last_prompt_time, conversation_turns
         if not conversation_active:
             return
 
-        print(f"[{device_id}] !!!Received reply: {message}")
-        waiting_for_reply = False  # ✅ Mark that we got something
-        history.append({"role": "assistant", "content": message})
+        print(f"[{device_id}] Received reply: {message}")
+        waiting_for_reply = False
+        memory.add_assistant_message(message)
         time.sleep(5)
 
+        if conversation_turns >= max_turns:
+            print(f"[{device_id}] That was a nice chat. I'm going idle now.")
+            conversation_active = False
+            start_time = time.time()
+            return
+
         response = generate_response(
-            f"You are a {personality}. Continue the conversation.", 
-            message, 
-            #history=history,
-            history=None,
-            model=model, 
+            system_prompt=f"You are a {personality}. Continue the conversation naturally.",
+            user_input=message,
+            history=memory.get(),
+            model=model,
             api_key=api_key
         )
-        history.append({"role": "user", "content": response})
-        print(f"[{device_id}] !!!Responding with: {response}")
+        memory.add_user_message(response)
+        print(f"[{device_id}] Responding with: {response}")
         mqtt.publish(response)
+        conversation_turns += 1
 
-    # Start MQTT
     mqtt = MQTTClient(
         client_id=device_id,
         broker=config["mqtt"]["broker"],
@@ -49,18 +58,11 @@ def run_talker(config):
     )
     mqtt.connect()
 
-    #print(f"[{device_id}] Starting in idle mode...")
+    print(f"[{device_id}] Starting idle mode...")
 
     try:
-        start_time = time.time()
-        delay_to_start = config.get("conversation_start_delay", 10)
-        reply_timeout = 60  # seconds to wait for response
-        waiting_for_reply = False
-        last_prompt_time = None
-
         while True:
             current_time = time.time()
-
             if not conversation_active and current_time - start_time >= delay_to_start:
                 topic_prompt = random.choice([
                     "Let's talk about dreams.",
@@ -68,28 +70,24 @@ def run_talker(config):
                     "What's your opinion on pineapple pizza?",
                     "How would you explain 'consciousness'?"
                 ])
-                #print(f"[{device_id}] Starting conversation: {topic_prompt}")
-                history = [{"role": "user", "content": topic_prompt}]
-                #print(f"[{device_id}] Publishing to {config['topics']['chat_out']}: {topic_prompt}")
+                print(f"[{device_id}] Starting conversation: {topic_prompt}")
+                memory = ConversationMemory(max_length=10)
+                memory.add_user_message(topic_prompt)
                 mqtt.publish(topic_prompt)
                 conversation_active = True
                 waiting_for_reply = True
                 last_prompt_time = current_time
-
-            elif conversation_active and waiting_for_reply:
-                if current_time - last_prompt_time > reply_timeout:
-                    print(f"[{device_id}] I guess nobody wants to talk right now.")
-                    conversation_active = False
-                    waiting_for_reply = False
-                    start_time = time.time()  # restart idle cycle
-
+                conversation_turns = 1
+                max_turns = random.randint(4, 10)
+            elif conversation_active and waiting_for_reply and (current_time - last_prompt_time > 60):
+                print(f"[{device_id}] No response. Going back to idle.")
+                conversation_active = False
+                waiting_for_reply = False
+                start_time = time.time()
             else:
-                # Idle behavior
                 thought = random.choice(idle_thoughts)
                 print(f"[{device_id} thinks] {thought}")
                 time.sleep(random.randint(*config["idle_interval_range"]))
-
-
     except KeyboardInterrupt:
         mqtt.disconnect()
         print("\n[System] Talker stopped.")

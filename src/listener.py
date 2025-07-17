@@ -2,6 +2,7 @@ import time
 import random
 from chatgpt_handler import generate_idle_thoughts, generate_response
 from mqtt_handler import MQTTClient
+from conversation_memory import ConversationMemory
 
 def run_listener(config):
     device_id = config["device_id"]
@@ -16,34 +17,31 @@ def run_listener(config):
         model
     )
 
-    history = []  # 💡 Must be declared here for use in nonlocal below
+    memory = ConversationMemory(max_length=10)
 
     def on_message(message):
-        nonlocal history
+        nonlocal memory
 
         try:
             print(f"[{device_id}] Received: {message}")
             time.sleep(5)
 
-            # Update history with received message
-            history.append({"role": "user", "content": message})
+            # Treat incoming message from talker as user input
+            memory.add_user_message(message)
 
             response = generate_response(
                 system_prompt=f"You are a {personality}. Respond to the message appropriately.",
                 user_input=message,
-                history=history,
+                history=memory.get(),
                 model=model,
                 api_key=api_key
             )
 
-            history.append({"role": "assistant", "content": response})
+            # Append response to memory
+            memory.add_assistant_message(response)
+
             print(f"[{device_id}] Responding with: {response}")
             mqtt.publish(response)
-
-            # Optionally limit history length
-            if len(history) > 10:
-                history = history[-10:]
-
         except Exception as e:
             print(f"[{device_id} ERROR] Exception in on_message: {e}")
 
@@ -52,8 +50,8 @@ def run_listener(config):
         client_id=device_id,
         broker=config["mqtt"]["broker"],
         port=config["mqtt"]["port"],
-        topic_in=config["topics"]["chat_in"],       # e.g., "chat/send"
-        topic_out=config["topics"]["chat_out"],     # e.g., "chat/receive"
+        topic_in=config["topics"]["chat_in"],       # e.g. "chat/send"
+        topic_out=config["topics"]["chat_out"],     # e.g. "chat/receive"
         on_message_callback=on_message
     )
     mqtt.connect()
