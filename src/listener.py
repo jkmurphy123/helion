@@ -8,23 +8,32 @@ def run_listener(config):
     personality = config["personality"]
     model = config["openai"]["model"]
     api_key = config["openai"]["api_key"]
-
+    history = []
+    
     idle_thoughts = generate_idle_thoughts(personality, config["idle_thought_count"], api_key, model)
 
     def on_message(message):
-        #print(f"[{device_id}] Received: {message}")
+        nonlocal history
+
+        print(f"[{device_id}] Received: {message}")
         time.sleep(5)
 
-        print(f"[{device_id}] ***Got message: {message}")
+        # Add incoming message to history
+        history.append({"role": "user", "content": message})
+
         response = generate_response(
             f"You are a {personality}. Respond to the message appropriately.",
             message,
-            history=None,
+            history=history,
             model=model,
             api_key=api_key
         )
-        print(f"[{device_id}] ***Responding with: {response}")
-        mqtt.publish(response)
+
+    # Add the generated response to the history
+    history.append({"role": "assistant", "content": response})
+
+    print(f"[{device_id}] Responding with: {response}")
+    mqtt.publish(response)
 
     mqtt = MQTTClient(
         client_id=device_id,
