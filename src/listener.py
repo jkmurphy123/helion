@@ -1,7 +1,7 @@
 import time
 import random
-from src.chatgpt_handler import generate_idle_thoughts, generate_response
-from src.mqtt_handler import MQTTClient
+from chatgpt_handler import generate_idle_thoughts, generate_response
+from mqtt_handler import MQTTClient
 
 def run_listener(config):
     device_id = config["device_id"]
