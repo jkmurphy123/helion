@@ -15,7 +15,7 @@ class MQTTClient:
         self.client.on_message = self.handle_message
 
     def on_connect(self, client, userdata, flags, rc):
-        print(f"[MQTT] Connected with result code {rc}")
+        #print(f"[MQTT] Connected with result code {rc}")
         client.subscribe(self.topic_in)
 
     def handle_message(self, client, userdata, msg):
