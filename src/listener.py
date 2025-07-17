@@ -15,6 +15,7 @@ def run_listener(config):
         print(f"[{device_id}] Received: {message}")
         time.sleep(5)
 
+        print(f"[{device_id}] ***Got message: {message}")
         response = generate_response(
             f"You are a {personality}. Respond to the message appropriately.",
             message,
@@ -22,15 +23,15 @@ def run_listener(config):
             model=model,
             api_key=api_key
         )
-        #print(f"[{device_id}] Responding with: {response}")
+        print(f"[{device_id}] ***Responding with: {response}")
         mqtt.publish(response)
 
     mqtt = MQTTClient(
         client_id=device_id,
         broker=config["mqtt"]["broker"],
         port=config["mqtt"]["port"],
-        topic_in=config["topics"]["chat_in"],
-        topic_out=config["topics"]["chat_out"],
+        topic_in=config["topics"]["chat_in"],     # should be "chat/send"
+        topic_out=config["topics"]["chat_out"],   # should be "chat/receive"
         on_message_callback=on_message
     )
     mqtt.connect()

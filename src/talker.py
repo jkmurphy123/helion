@@ -42,8 +42,8 @@ def run_talker(config):
         client_id=device_id,
         broker=config["mqtt"]["broker"],
         port=config["mqtt"]["port"],
-        topic_in=config["topics"]["chat_in"],
-        topic_out=config["topics"]["chat_out"],
+        topic_in=config["topics"]["chat_in"],     # should be "chat/receive"
+        topic_out=config["topics"]["chat_out"],   # should be "chat/send"
         on_message_callback=on_reply
     )
     mqtt.connect()
