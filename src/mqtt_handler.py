@@ -15,13 +15,13 @@ class MQTTClient:
         self.client.on_message = self.handle_message
 
     def on_connect(self, client, userdata, flags, rc):
-        print(f"[MQTT] Connected with result code {rc}")
-        print(f"[MQTT] Subscribing to topic: {self.topic_in}")
+        #print(f"[MQTT] Connected with result code {rc}")
+        #print(f"[MQTT] Subscribing to topic: {self.topic_in}")
         client.subscribe(self.topic_in)
 
     def handle_message(self, client, userdata, msg):
         message = msg.payload.decode('utf-8')
-        print(f"[MQTT] Received: {message}")
+        #print(f"[MQTT] Received: {message}")
         self.on_message_callback(message)
 
     def connect(self):
@@ -29,7 +29,7 @@ class MQTTClient:
         self.client.loop_start()
 
     def publish(self, message):
-        print(f"[MQTT] Sending: {message}")
+        #print(f"[MQTT] Sending: {message}")
         self.client.publish(self.topic_out, message)
 
     def disconnect(self):

@@ -34,7 +34,7 @@ def run_talker(config):
             api_key=api_key
         )
         history.append({"role": "user", "content": response})
-        print(f"[{device_id}] Responding with: {response}")
+        #print(f"[{device_id}] Responding with: {response}")
         mqtt.publish(response)
 
     # Start MQTT
@@ -48,7 +48,7 @@ def run_talker(config):
     )
     mqtt.connect()
 
-    print(f"[{device_id}] Starting in idle mode...")
+    #print(f"[{device_id}] Starting in idle mode...")
 
     try:
         start_time = time.time()
@@ -67,9 +67,9 @@ def run_talker(config):
                     "What's your opinion on pineapple pizza?",
                     "How would you explain 'consciousness'?"
                 ])
-                print(f"[{device_id}] Starting conversation: {topic_prompt}")
+                #print(f"[{device_id}] Starting conversation: {topic_prompt}")
                 history = [{"role": "user", "content": topic_prompt}]
-                print(f"[{device_id}] Publishing to {config['topics']['chat_out']}: {topic_prompt}")
+                #print(f"[{device_id}] Publishing to {config['topics']['chat_out']}: {topic_prompt}")
                 mqtt.publish(topic_prompt)
                 conversation_active = True
                 waiting_for_reply = True

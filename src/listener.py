@@ -22,7 +22,7 @@ def run_listener(config):
             model=model,
             api_key=api_key
         )
-        print(f"[{device_id}] Responding with: {response}")
+        #print(f"[{device_id}] Responding with: {response}")
         mqtt.publish(response)
 
     mqtt = MQTTClient(
@@ -40,7 +40,7 @@ def run_listener(config):
     try:
         while True:
             thought = random.choice(idle_thoughts)
-            print(f"[{device_id} thinks] {thought}")
+            #print(f"[{device_id} thinks] {thought}")
             time.sleep(random.randint(*config["idle_interval_range"]))
     except KeyboardInterrupt:
         mqtt.disconnect()
