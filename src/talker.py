@@ -1,85 +1,112 @@
 import sys
-import random
 import time
+import random
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QTimer
-
-from display_window import DisplayWindow
+from display_window import ConversationWindow
+from chatgpt_handler import generate_idle_thoughts, generate_response
 from mqtt_handler import MQTTClient
-from chatgpt_handler import generate_response
+from conversation_memory import ConversationMemory
 
 def run_talker(config):
-    # Get selected personality info
-    personality_data = config["selected_personality"]
-    personality = personality_data["personality"]
-    image_file = personality_data["image_file_name"]
-    dialog_x = personality_data["dialog_x"]
-    dialog_y = personality_data["dialog_y"]
-    dialog_width = personality_data["dialog_width"]
-    dialog_height = personality_data["dialog_height"]
+    device_id = config["device_id"]
+    personality = config["personality"]
+    model = config["openai"]["model"]
+    api_key = config["openai"]["api_key"]
+    max_turns = config["conversation_turns"]
+    start_delay = config.get("conversation_start_delay", 30)
 
-    # Setup GUI
+    memory = ConversationMemory()
     app = QApplication(sys.argv)
-    window = DisplayWindow(
-        image_path=image_file,
-        dialog_x=dialog_x,
-        dialog_y=dialog_y,
-        dialog_width=dialog_width,
-        dialog_height=dialog_height
+    window = ConversationWindow()
+    conversation_lines = []
+
+    def update_display(new_line):
+        conversation_lines.append(new_line)
+        if len(conversation_lines) > 50:
+            conversation_lines.pop(0)
+        window.update_text("\n".join(conversation_lines))
+
+    idle_thoughts = generate_idle_thoughts(
+        personality,
+        config["idle_thought_count"],
+        api_key,
+        model
     )
-    window.showFullScreen()
 
-    # Setup conversation parameters
-    start_delay = config.get("conversation_start_delay", 10)
-    prompt_starters = config["topics"]["prompt_starters"]
-    conversation_turns = config.get("conversation_turns", 6)
-    topic_out = config["topics"]["chat_out"]
-    topic_in = config["topics"]["chat_in"]
-    device_id = config.get("device_id", "pi_talker")
+    conversation_active = False
+    waiting_for_reply = False
+    last_prompt_time = time.time()
+    conversation_turns = 0
 
-    # Setup history
-    history = []
+    def on_reply(message):
+        nonlocal conversation_active, waiting_for_reply, last_prompt_time, conversation_turns
+        update_display(f"[Listener] {message}")
+        memory.add_assistant_message(message)
+        waiting_for_reply = False
+        time.sleep(5)
 
-    # Setup MQTT
-    def on_message(topic, message):
-        nonlocal history
-        print(f"[MQTT] Received from listener: {message}")
-        window.display_text(message)
-        history.append({"role": "user", "content": message})
+        if conversation_turns >= max_turns:
+            update_display("[Talker] That was a nice chat. I'm going idle now.")
+            conversation_active = False
+            return
 
-        if len(history) < 2 * conversation_turns:
-            time.sleep(5)
-            response = generate_chat_response(config, history, personality)
-            history.append({"role": "assistant", "content": response})
-            window.display_text(response)
-            mqtt.publish(topic_out, response)
-        else:
-            print("[Talker] Ending conversation, returning to idle.")
-            idle_mode()
+        response = generate_response(
+            system_prompt=f"You are a {personality}. Continue the conversation naturally.",
+            user_input=message,
+            history=memory.get(),
+            model=model,
+            api_key=api_key
+        )
 
-    mqtt = MQTTClient(device_id, on_message)
-    mqtt.connect(config["mqtt"]["broker"], config["mqtt"]["port"])
-    mqtt.subscribe(topic_in)
+        update_display(f"[Talker] {response}")
+        memory.add_user_message(response)
+        mqtt.publish(response)
+        conversation_turns += 1
+        waiting_for_reply = True
+        last_prompt_time = time.time()
 
-    def start_conversation():
-        nonlocal history
-        window.display_text("Starting conversation...")
-        prompt = random.choice(prompt_starters)
-        window.display_text(prompt)
-        history = [{"role": "user", "content": prompt}]
-        mqtt.publish(topic_out, prompt)
+    mqtt = MQTTClient(
+        client_id=device_id,
+        broker=config["mqtt"]["broker"],
+        port=config["mqtt"]["port"],
+        topic_in=config["topics"]["chat_out"],
+        topic_out=config["topics"]["chat_in"],
+        on_message_callback=on_reply
+    )
+    mqtt.connect()
 
-    def idle_mode():
-        thoughts = config.get("idle_thoughts", [])
-        if not thoughts:
-            thoughts = ["Did I leave the stove on?", "I wonder what clouds taste like...", "Why is bacon so delicious?"]
-        thought = random.choice(thoughts)
-        window.display_text(thought)
+    update_display(f"[{device_id}] Entering idle mode...")
 
-    # Initial idle mode
-    idle_mode()
+    try:
+        while True:
+            if not conversation_active:
+                if time.time() - last_prompt_time > start_delay:
+                    topic_prompt = random.choice(config["topics"]["prompt_starters"])
+                    memory.clear()
+                    memory.add_user_message(topic_prompt)
+                    mqtt.publish(topic_prompt)
+                    update_display(f"[Talker] {topic_prompt}")
+                    conversation_active = True
+                    waiting_for_reply = True
+                    conversation_turns = 1
+                    last_prompt_time = time.time()
+                else:
+                    thought = random.choice(idle_thoughts)
+                    update_display(f"[{device_id} thinks] {thought}")
+            else:
+                if waiting_for_reply and (time.time() - last_prompt_time > 60):
+                    update_display("[Talker] I guess nobody wants to talk. Going idle.")
+                    conversation_active = False
+                    memory.clear()
+                    last_prompt_time = time.time()
+                    continue
 
-    # Delay then start conversation
-    QTimer.singleShot(start_delay * 1000, start_conversation)
+            time.sleep(random.randint(*config["idle_interval_range"]))
+    except KeyboardInterrupt:
+        mqtt.disconnect()
+        update_display("[System] Talker stopped.")
+        sys.exit()
 
-    sys.exit(app.exec_())
+if __name__ == "__main__":
+    from config_loader import load_config
+    run_talker(load_config())
