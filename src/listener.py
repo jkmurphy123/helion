@@ -48,7 +48,7 @@ def run_listener(config):
         window.display_text(response)
         mqtt.publish(topic_out, response)
 
-    mqtt = MQTTClient(client_id=device_id, on_message=on_message)
+    mqtt = MQTTClient(device_id, on_message)
     mqtt.connect(config["mqtt"]["broker"], config["mqtt"]["port"])
     mqtt.subscribe(topic_in)
 
