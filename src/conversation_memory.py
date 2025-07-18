@@ -17,3 +17,7 @@ class ConversationMemory:
     def trim(self):
         if len(self.history) > self.max_length:
             self.history = self.history[-self.max_length:]
+            
+    def clear(self):
+        """Clear the conversation history."""
+        self.history = []            

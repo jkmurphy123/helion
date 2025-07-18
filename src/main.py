@@ -6,15 +6,10 @@ from talker import run_talker
 from listener import run_listener
 
 def main():
-    # Allow optional config file override
-    parser = argparse.ArgumentParser(description="AI Conversation Agent")
-    parser.add_argument("--config", type=str, default="device_config.yaml", help="Path to config file")
-    args = parser.parse_args()
-
-    # Load config with selected personality
-    config = load_config(args.config)
-
-    role = config.get("role", "").lower()
+    config_path = "device_config.yaml"
+    config = load_config(config_path)
+    role = config.get("role", "talker").lower()
+    
     if role == "talker":
         print("[Main] Starting in TALKER mode")
         run_talker(config)
