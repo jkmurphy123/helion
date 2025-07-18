@@ -8,9 +8,9 @@ def load_config(path):
         return yaml.safe_load(file)
 
 def main():
-    config_path = "config/device_config.yaml"
+    config_path = "device_config.yaml"
     config = load_config(config_path)
-    mode = config.get("mode", "listener")
+    mode = config.get("role", "talker")
 
     if mode == "talker":
         run_talker(config)
