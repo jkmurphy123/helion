@@ -209,3 +209,6 @@ __marimo__/
 # Ignore OpenAI API key file
 config/device_config.yaml
 src/config/device_config.yaml
+src/device_config.yaml
+src/config/listener_config.yaml
+src/config/talker_config.yaml
