@@ -13,6 +13,7 @@ def run_talker(config):
     model = config["openai"]["model"]
     api_key = config["openai"]["api_key"]
     max_turns = config["conversation_turns"]
+    start_delay = config.get("conversation_start_delay", 30)
 
     memory = ConversationMemory()
     app = QApplication(sys.argv)
@@ -34,7 +35,7 @@ def run_talker(config):
 
     conversation_active = False
     waiting_for_reply = False
-    last_prompt_time = 0
+    last_prompt_time = time.time()
     conversation_turns = 0
 
     def on_reply(message):
@@ -79,7 +80,7 @@ def run_talker(config):
     try:
         while True:
             if not conversation_active:
-                if random.random() < 0.2:
+                if time.time() - last_prompt_time > start_delay:
                     topic_prompt = random.choice(config["topics"]["prompt_starters"])
                     memory.clear()
                     memory.add_user_message(topic_prompt)
@@ -97,6 +98,7 @@ def run_talker(config):
                     update_display("[Talker] I guess nobody wants to talk. Going idle.")
                     conversation_active = False
                     memory.clear()
+                    last_prompt_time = time.time()
                     continue
 
             time.sleep(random.randint(*config["idle_interval_range"]))
