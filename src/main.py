@@ -1,21 +1,29 @@
 import sys
-import yaml
+import argparse
+
+from config_loader import load_config
 from talker import run_talker
 from listener import run_listener
 
-def load_config(path):
-    with open(path, 'r') as file:
-        return yaml.safe_load(file)
-
 def main():
-    config_path = "config/device_config.yaml"
-    config = load_config(config_path)
-    mode = config.get("mode", "listener")
+    # Allow optional config file override
+    parser = argparse.ArgumentParser(description="AI Conversation Agent")
+    parser.add_argument("--config", type=str, default="device_config.yaml", help="Path to config file")
+    args = parser.parse_args()
 
-    if mode == "talker":
+    # Load config with selected personality
+    config = load_config(args.config)
+
+    role = config.get("role", "").lower()
+    if role == "talker":
+        print("[Main] Starting in TALKER mode")
         run_talker(config)
-    else:
+    elif role == "listener":
+        print("[Main] Starting in LISTENER mode")
         run_listener(config)
+    else:
+        print(f"[Main] Invalid or missing role in config: '{role}'")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
