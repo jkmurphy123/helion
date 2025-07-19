@@ -19,8 +19,10 @@ def run_talker(config):
 
     memory = ConversationMemory()
     app = QApplication(sys.argv)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(base_dir, "images", personality_config["image_file_name"]
     window = ConversationWindow(
-        background_image=os.path.join("images", personality_config["image_file_name"]),
+        background_image=image_path,
         dialog_x=personality_config.get("dialog_x", 50),
         dialog_y=personality_config.get("dialog_y", 50),
         dialog_width=personality_config.get("dialog_width", 800),
