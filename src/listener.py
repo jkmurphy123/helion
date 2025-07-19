@@ -6,6 +6,9 @@ from display_window import ConversationWindow
 from chatgpt_handler import generate_response
 from mqtt_handler import MQTTClient
 from conversation_memory import ConversationMemory
+from logger import setup_logger
+
+logger = setup_logger(name="listener", log_file="logs/listener.log")
 
 def run_listener(config):
     device_id = config["device_id"]
@@ -18,6 +21,8 @@ def run_listener(config):
     app = QApplication(sys.argv)
     base_dir = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(base_dir, "images", personality_config["image_file_name"])
+    logger.info(f"Load image from {image_path}")
+    
     window = ConversationWindow(
         background_image=image_path,
         dialog_x=personality_config.get("dialog_x", 50),
@@ -34,7 +39,8 @@ def run_listener(config):
         window.update_text("\n".join(conversation_lines))
 
     def on_prompt(message):
-        update_display(f"[Talker] {message}")
+        logger.debug(f"{message}")
+        update_display(f"{message}")
         memory.add_user_message(message)
 
         time.sleep(5)
@@ -47,7 +53,8 @@ def run_listener(config):
             api_key=api_key
         )
 
-        update_display(f"[Listener] {response}")
+        logger.debug(f"{response}")
+        update_display(f"{response}")
         memory.add_assistant_message(response)
         mqtt.publish(response)
 
@@ -61,7 +68,7 @@ def run_listener(config):
     )
     mqtt.connect()
 
-    update_display(f"[{device_id}] Waiting in idle mode...")
+    logger.info(f"[{device_id}] Waiting in idle mode...")
 
     try:
         sys.exit(app.exec_())

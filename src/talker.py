@@ -7,6 +7,9 @@ from display_window import ConversationWindow
 from chatgpt_handler import generate_idle_thoughts, generate_response
 from mqtt_handler import MQTTClient
 from conversation_memory import ConversationMemory
+from logger import setup_logger
+
+logger = setup_logger(name="talker", log_file="logs/talker.log")
 
 def run_talker(config):
     device_id = config["device_id"]
@@ -20,7 +23,9 @@ def run_talker(config):
     memory = ConversationMemory()
     app = QApplication(sys.argv)
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    image_path = os.path.join(base_dir, "images", personality_config["image_file_name"]
+    image_path = os.path.join(base_dir, "images", personality_config["image_file_name"])
+    logger.info(f"Load image from {image_path}")
+    
     window = ConversationWindow(
         background_image=image_path,
         dialog_x=personality_config.get("dialog_x", 50),
@@ -50,13 +55,14 @@ def run_talker(config):
 
     def on_reply(message):
         nonlocal conversation_active, waiting_for_reply, last_prompt_time, conversation_turns
-        update_display(f"[Listener] {message}")
+        #update_display(f"[Listener] {message}")
+        logger.debug(f"[Listener] {message}")
         memory.add_assistant_message(message)
         waiting_for_reply = False
         time.sleep(5)
 
         if conversation_turns >= max_turns:
-            update_display("[Talker] That was a nice chat. I'm going idle now.")
+            update_display("That was a nice chat. I'm going idle now.")
             conversation_active = False
             return
 
@@ -68,7 +74,8 @@ def run_talker(config):
             api_key=api_key
         )
 
-        update_display(f"[Talker] {response}")
+        logger.debug(f"{response}")
+        update_display(f"{response}")
         memory.add_user_message(response)
         mqtt.publish(response)
         conversation_turns += 1

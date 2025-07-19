@@ -4,6 +4,9 @@ import argparse
 from config_loader import load_config
 from talker import run_talker
 from listener import run_listener
+from logger import setup_logger
+
+logger = setup_logger(name="main", log_file="logs/main.log")
 
 def main():
     config_path = "device_config.yaml"
@@ -11,13 +14,13 @@ def main():
     role = config.get("role", "talker").lower()
     
     if role == "talker":
-        print("[Main] Starting in TALKER mode")
+        logger.info("[Main] Starting in TALKER mode")
         run_talker(config)
     elif role == "listener":
-        print("[Main] Starting in LISTENER mode")
+        logger.info("[Main] Starting in LISTENER mode")
         run_listener(config)
     else:
-        print(f"[Main] Invalid or missing role in config: '{role}'")
+        logger.error(f"[Main] Invalid or missing role in config: '{role}'")
         sys.exit(1)
 
 if __name__ == "__main__":
