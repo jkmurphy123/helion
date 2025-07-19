@@ -1,25 +1,24 @@
-# src/display_window.py
-
-from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QTextEdit
+from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
 
 class ConversationWindow(QWidget):
-    def __init__(self):
+    def __init__(self, background_image, dialog_x, dialog_y, dialog_width, dialog_height):
         super().__init__()
-        self.setWindowTitle("AI Conversation Display")
-        self.setStyleSheet("background-color: black; color: white;")
-        self.setFont(QFont("Courier", 16))
-        self.init_ui()
-
-    def init_ui(self):
-        self.layout = QVBoxLayout()
-        self.label = QLabel("Starting up...")
-        self.label.setWordWrap(True)
-        self.label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.layout.addWidget(self.label)
-        self.setLayout(self.layout)
+        self.setWindowTitle("AI Conversation")
         self.showFullScreen()
 
+        # Set background image
+        self.background_label = QLabel(self)
+        pixmap = QPixmap(background_image)
+        self.background_label.setPixmap(pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
+        self.background_label.setGeometry(0, 0, self.width(), self.height())
+
+        # Set dialog box
+        self.text_area = QTextEdit(self)
+        self.text_area.setGeometry(dialog_x, dialog_y, dialog_width, dialog_height)
+        self.text_area.setStyleSheet("background-color: rgba(255, 255, 255, 180); color: black; font-size: 18px;")
+        self.text_area.setReadOnly(True)
+
     def update_text(self, text):
-        self.label.setText(text)
+        self.text_area.setPlainText(text)

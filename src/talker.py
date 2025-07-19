@@ -1,4 +1,5 @@
 import sys
+import os
 import time
 import random
 from PyQt5.QtWidgets import QApplication
@@ -19,7 +20,7 @@ def run_talker(config):
     memory = ConversationMemory()
     app = QApplication(sys.argv)
     window = ConversationWindow(
-        background_image=personality_config.get("image_file_name"),
+        background_image=os.path.join("images", personality_config["image_file_name"]),
         dialog_x=personality_config.get("dialog_x", 50),
         dialog_y=personality_config.get("dialog_y", 50),
         dialog_width=personality_config.get("dialog_width", 800),
