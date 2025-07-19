@@ -9,7 +9,8 @@ from conversation_memory import ConversationMemory
 
 def run_talker(config):
     device_id = config["device_id"]
-    personality = config["personality"]
+    personality_config = config["selected_personality"]
+    personality = personality_config["personality"]
     model = config["openai"]["model"]
     api_key = config["openai"]["api_key"]
     max_turns = config["conversation_turns"]
@@ -17,7 +18,13 @@ def run_talker(config):
 
     memory = ConversationMemory()
     app = QApplication(sys.argv)
-    window = ConversationWindow()
+    window = ConversationWindow(
+        background_image=personality_config.get("image_file_name"),
+        dialog_x=personality_config.get("dialog_x", 50),
+        dialog_y=personality_config.get("dialog_y", 50),
+        dialog_width=personality_config.get("dialog_width", 800),
+        dialog_height=personality_config.get("dialog_height", 600),
+    )
     conversation_lines = []
 
     def update_display(new_line):
@@ -99,7 +106,6 @@ def run_talker(config):
                     conversation_active = False
                     memory.clear()
                     last_prompt_time = time.time()
-                    continue
 
             time.sleep(random.randint(*config["idle_interval_range"]))
     except KeyboardInterrupt:
