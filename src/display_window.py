@@ -11,6 +11,14 @@ class ConversationWindow(QWidget):
         # Set background image
         self.background_label = QLabel(self)
         pixmap = QPixmap(background_image)
+        if pixmap.isNull():
+            #print(f"[ERROR] Failed to load image: {background_image}")
+            logger.error(f"Failed to load image: {background_image}")
+            self.setStyleSheet("background-color: pink;")  # fallback background
+        else:
+            self.background_label.setPixmap(
+                pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+            )
         self.background_label.setPixmap(pixmap.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
         self.background_label.setGeometry(0, 0, self.width(), self.height())
 

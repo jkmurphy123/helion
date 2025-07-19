@@ -10,6 +10,7 @@ from conversation_memory import ConversationMemory
 from logger import setup_logger
 
 logger = setup_logger(name="talker", log_file="logs/talker.log")
+logger.info("Talker starting up")
 
 def run_talker(config):
     device_id = config["device_id"]
@@ -25,7 +26,7 @@ def run_talker(config):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(base_dir, "images", personality_config["image_file_name"])
     logger.info(f"Load image from {image_path}")
-    
+
     window = ConversationWindow(
         background_image=image_path,
         dialog_x=personality_config.get("dialog_x", 50),
@@ -33,6 +34,8 @@ def run_talker(config):
         dialog_width=personality_config.get("dialog_width", 800),
         dialog_height=personality_config.get("dialog_height", 600),
     )
+    window.show()
+
     conversation_lines = []
 
     def update_display(new_line):
